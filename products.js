@@ -5,9 +5,9 @@
    ========================================================= */
 const SHOP = {
   name: "М Маркет",
-  whatsapp: "996700000000",                       // ← ваш номер WhatsApp
-  instagram: "https://instagram.com/m_market.kg", // ← ваш Instagram
-  address: "г. Бишкек, ул. Киевская, 95 (ориентир: ТЦ «Пример»)",
+  whatsapp: "996706067666",                                   // 0706 067 666
+  instagram: "https://www.instagram.com/mmarket_oldbishkek/",
+  address: "г. Бишкек, подземный комплекс «Олд Бишкек», бутик А7",
   hours: "Ежедневно с 10:00 до 20:00",
   currency: "сом",
 };
