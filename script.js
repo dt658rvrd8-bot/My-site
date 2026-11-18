@@ -87,23 +87,23 @@
     search: $("#searchInput"), searchClear: $("#searchClear"), sort: $("#sortSelect"),
     empty: $("#emptyState"), results: $("#resultsCount"), title: $("#catalogTitle"),
     cart: $("#cart"), overlay: $("#cartOverlay"), cartItems: $("#cartItems"), cartEmpty: $("#cartEmpty"),
-    cartFoot: $("#cartFoot"), cartTotal: $("#cartTotal"), cartCount: $("#cartCount"), cartHint: $("#cartHint"),
+    cartFoot: $("#cartFoot"), cartTotal: $("#cartTotal"), cartHint: $("#cartHint"),
+    cartCounts: document.querySelectorAll(".js-cart-count"), chips: $("#categoryChips"),
     toast: $("#toast"),
   };
 
   // ---------- Контакты ----------
   function initContacts() {
     const hello = "Здравствуйте! Пишу с сайта М Маркет.kg.";
-    ["#headerWhatsapp", "#heroWhatsapp", "#footerWhatsapp"].forEach((s) => ($(s).href = waLink(hello)));
+    ["#headerWhatsapp", "#heroWhatsapp", "#footerWhatsapp", "#tabbarWhatsapp"].forEach((s) => ($(s).href = waLink(hello)));
     ["#headerInstagram", "#footerInstagram"].forEach((s) => ($(s).href = SHOP.instagram));
     $("#footerAddress").textContent = SHOP.address;
-    $("#footerHours").textContent = "Режим работы: " + SHOP.hours;
+    $("#footerHours").textContent = "Режим работы: " + SHOP.hours.toLowerCase();
+    $("#footerHoursShort").textContent = SHOP.hours.toLowerCase();
     $("#perkHours").textContent = SHOP.hours;
     const phone = $("#footerPhone");
-    phone.textContent = "WhatsApp: " + SHOP.phoneDisplay;
+    phone.textContent = SHOP.phoneDisplay;
     phone.href = waLink(hello);
-    phone.target = "_blank";
-    phone.rel = "noopener";
     $("#year").textContent = new Date().getFullYear();
   }
 
@@ -113,20 +113,39 @@
   function renderNav() {
     const items = [{ id: "all", title: "Все товары" }].concat(CATEGORIES);
     el.nav.innerHTML = items.map((c) =>
-      '<button class="nav__item' + (state.category === c.id ? " is-active" : "") + '" data-category="' + c.id + '">' +
+      '<button class="nav__item' + (state.category === c.id && state.tab !== "sale" ? " is-active" : "") + '" data-category="' + c.id + '">' +
       escapeHtml(c.title) + "</button>"
     ).join("") +
-      '<button class="nav__item nav__item--sale' + (state.tab === "sale" ? " is-active" : "") + '" data-tab="sale">Скидки</button>';
+      '<button class="nav__item nav__item--sale' + (state.tab === "sale" ? " is-active" : "") + '" data-tab="sale" data-reset-category>Скидки</button>';
   }
 
+  // Плитки под баннером: подборки + категории
   function renderCatTiles() {
-    el.cats.innerHTML = CATEGORIES.map((c) =>
-      '<button class="cat' + (state.category === c.id ? " is-active" : "") + '" data-category="' + c.id + '">' +
-        '<span class="cat__icon">' + ICONS[c.id] + "</span>" +
-        '<span class="cat__title">' + escapeHtml(c.title) + "</span>" +
-        '<span class="cat__count">' + countIn(c.id) + " шт.</span>" +
-      "</button>"
-    ).join("");
+    const special = [
+      { tab: "sale", title: "Скидки", icon: '<span class="tile__img tile__img--sale">%</span>' },
+      { tab: "new", title: "Новинки", icon: '<span class="tile__img"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 5.2 5.6.6-4.2 3.8 1.2 5.6L12 15.4 7 18.2l1.2-5.6L4 8.8l5.6-.6z"/></svg></span>' },
+      { tab: "hit", title: "Хиты продаж", icon: '<span class="tile__img"><svg viewBox="0 0 24 24"><path d="M12 21c-4 0-7-2.7-7-6.5 0-3 2-5 3.5-6.5.3 2 1.3 3 2.5 3.5C11 8 12 5 14.5 3c.5 3 4.5 5.5 4.5 11 0 4-3 7-7 7z"/></svg></span>' },
+    ];
+    el.cats.innerHTML =
+      special.map((t) =>
+        '<button class="tile' + (state.tab === t.tab ? " is-active" : "") + '" data-tab="' + t.tab + '" data-reset-category>' +
+        t.icon + '<span class="tile__label">' + t.title + "</span></button>"
+      ).join("") +
+      CATEGORIES.map((c) =>
+        '<button class="tile' + (state.category === c.id ? " is-active" : "") + '" data-category="' + c.id + '">' +
+          '<span class="tile__img">' + ICONS[c.id] + "</span>" +
+          '<span class="tile__label">' + escapeHtml(c.title) + "</span>" +
+        "</button>"
+      ).join("");
+  }
+
+  function renderChips() {
+    const items = [{ id: "all", title: "Все" }].concat(CATEGORIES);
+    el.chips.innerHTML = items.map((c) => {
+      const active = state.category === c.id;
+      return '<button class="chip' + (active ? " is-active" : "") + '" role="tab" aria-selected="' + active +
+        '" data-category="' + c.id + '">' + escapeHtml(c.title) + '<span class="chip__count">' + countIn(c.id) + "</span></button>";
+    }).join("");
   }
 
   function renderTabs() {
@@ -135,7 +154,7 @@
       const n = base.filter(t.test).length;
       const active = state.tab === t.id;
       return '<button class="tab' + (active ? " is-active" : "") + '" role="tab" aria-selected="' + active +
-        '" data-tab="' + t.id + '">' + t.title + '<span class="tab__count">' + n + "</span></button>";
+        '" data-tab="' + t.id + '">' + t.title + " · " + n + "</button>";
     }).join("");
   }
 
@@ -153,6 +172,7 @@
   function renderFilters() {
     renderNav();
     renderCatTiles();
+    renderChips();
     renderTabs();
   }
 
@@ -169,9 +189,12 @@
 
     if (cat) {
       state.category = cat.dataset.category;
-      if (state.tab === "sale" && cat.closest("#nav")) state.tab = "all";
+      if (!cat.closest("#categoryChips")) state.tab = "all";
     }
-    if (tab) state.tab = tab.dataset.tab;
+    if (tab) {
+      state.tab = tab.dataset.tab;
+      if (tab.hasAttribute("data-reset-category")) state.category = "all";
+    }
     if (brand) {
       state.category = "all";
       state.tab = "all";
@@ -181,9 +204,15 @@
     }
     renderFilters();
     renderProducts();
-    if (!e.target.closest("#tabs")) scrollToCatalog();
+    if (!e.target.closest("#tabs, #categoryChips")) scrollToCatalog();
     if (cat && cat.closest("#nav")) cat.scrollIntoView({ inline: "nearest", block: "nearest" });
   });
+
+  document.querySelectorAll(".js-to-catalog").forEach((b) => b.addEventListener("click", scrollToCatalog));
+  document.querySelectorAll(".js-focus-search").forEach((b) => b.addEventListener("click", () => {
+    scrollToCatalog();
+    setTimeout(() => el.search.focus({ preventScroll: true }), 350);
+  }));
 
   // ---------- Поиск ----------
   el.search.addEventListener("input", () => {
@@ -248,40 +277,47 @@
     el.title.textContent =
       state.query ? "Результаты поиска" :
       state.category !== "all" ? categoryTitle(state.category) :
-      state.tab !== "all" ? tab.title : "Все товары";
+      state.tab !== "all" ? tab.title : "Каталог";
     el.results.textContent = list.length + " " + pluralGoods(list.length);
     el.empty.hidden = list.length > 0;
 
     el.grid.innerHTML = list.map((p) => {
       const inCart = state.cart[p.id] || 0;
       const d = discount(p);
-      const badges =
-        (p.badge === "hit" ? '<span class="badge badge--hit">Хит</span>' : "") +
-        (p.badge === "new" ? '<span class="badge badge--new">Новинка</span>' : "") +
-        (d ? '<span class="badge badge--sale">−' + d + "%</span>" : "");
       return (
         '<article class="card">' +
-          '<div class="card__media">' + mediaHtml(p) + '<div class="badges">' + badges + "</div></div>" +
+          '<div class="card__media">' + mediaHtml(p) +
+            (d ? '<span class="disc">−' + d + "%</span>" : "") +
+            (p.badge === "hit" ? '<span class="label label--hit">Хит</span>' : "") +
+            (p.badge === "new" ? '<span class="label">Новинка</span>' : "") +
+          "</div>" +
           '<div class="card__body">' +
-            (p.brand
-              ? '<div class="card__brand">' + highlight(p.brand, state.query) + "</div>"
-              : '<div class="card__cat">' + escapeHtml(categoryTitle(p.category)) + "</div>") +
-            '<h3 class="card__name">' + highlight(p.name, state.query) + "</h3>" +
+            '<div class="card__type">' + escapeHtml(categoryTitle(p.category)) + "</div>" +
+            '<h3 class="card__name">' + (p.brand ? highlight(p.brand, state.query) + " " : "") + highlight(p.name, state.query) + "</h3>" +
             '<p class="card__desc">' + highlight(p.description, state.query) + "</p>" +
-            '<div class="card__prices">' +
-              '<span class="card__price' + (d ? " card__price--sale" : "") + '">' + formatPrice(p.price) + "</span>" +
-              (d ? '<span class="card__old">' + formatPrice(p.oldPrice) + "</span>" : "") +
-            "</div>" +
-            '<div class="card__actions">' +
-              '<button class="btn btn--dark' + (inCart ? " is-added" : "") + '" data-add="' + p.id + '">' + BAG_ICON +
-                (inCart ? "В корзине · " + inCart : "В корзину") + "</button>" +
-              '<a class="btn btn--outline" target="_blank" rel="noopener" href="' + escapeHtml(waLink(singleOrderText(p))) + '">' + WA_ICON +
+            '<div class="card__buy">' +
+              '<button class="price-pill' + (inCart ? " is-added" : "") + '" data-add="' + p.id + '" aria-label="В корзину: ' + escapeHtml(fullName(p)) + '">' +
+                BAG_ICON +
+                '<span class="price-pill__now">' + formatPrice(p.price) + "</span>" +
+                (d ? '<span class="price-pill__old">' + formatPrice(p.oldPrice) + "</span>" : "") +
+                '<span class="price-pill__action">' + (inCart ? "В корзине · " + inCart : "В корзину") + "</span>" +
+              "</button>" +
+              '<a class="card__wa" target="_blank" rel="noopener" href="' + escapeHtml(waLink(singleOrderText(p))) + '">' + WA_ICON +
                 '<span class="lbl-full">Заказать в WhatsApp</span><span class="lbl-short">Заказать</span></a>' +
             "</div>" +
           "</div>" +
         "</article>"
       );
     }).join("");
+  }
+
+  // Обновляет только кнопки «В корзину», без перерисовки каталога
+  function refreshBuyButtons() {
+    el.grid.querySelectorAll("[data-add]").forEach((btn) => {
+      const qty = state.cart[btn.dataset.add] || 0;
+      btn.classList.toggle("is-added", qty > 0);
+      btn.querySelector(".price-pill__action").textContent = qty ? "В корзине · " + qty : "В корзину";
+    });
   }
 
   function singleOrderText(p) {
@@ -297,12 +333,10 @@
     state.cart[id] = (state.cart[id] || 0) + 1;
     saveCart();
     updateCart();
-    renderProducts();
+    refreshBuyButtons();
     const p = PRODUCTS.find((x) => String(x.id) === id);
     showToast("Добавлено в корзину: " + p.name);
-    el.cartCount.classList.remove("bump");
-    void el.cartCount.offsetWidth;
-    el.cartCount.classList.add("bump");
+    el.cartCounts.forEach((c) => { c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); });
   });
 
   // ---------- Корзина ----------
@@ -317,9 +351,11 @@
     const count = items.reduce((s, x) => s + x.qty, 0);
     const total = items.reduce((s, x) => s + x.qty * x.product.price, 0);
 
-    el.cartCount.textContent = count > 99 ? "99+" : count;
-    el.cartCount.classList.toggle("is-empty", count === 0);
-    $("#cartOpen").setAttribute("aria-label", "Открыть корзину, товаров: " + count);
+    el.cartCounts.forEach((c) => {
+      c.textContent = count > 99 ? "99+" : count;
+      c.classList.toggle("is-empty", count === 0);
+    });
+    document.querySelectorAll(".js-cart-open").forEach((b) => b.setAttribute("aria-label", "Открыть корзину, товаров: " + count));
 
     el.cartEmpty.hidden = items.length > 0;
     el.cartFoot.hidden = items.length === 0;
@@ -361,12 +397,12 @@
       state.cart[id] = (state.cart[id] || 0) - 1;
       if (state.cart[id] <= 0) delete state.cart[id];
     }
-    if (inc || dec) { saveCart(); updateCart(); renderProducts(); }
+    if (inc || dec) { saveCart(); updateCart(); refreshBuyButtons(); }
   });
 
   $("#cartClear").addEventListener("click", () => {
     state.cart = {};
-    saveCart(); updateCart(); renderProducts();
+    saveCart(); updateCart(); refreshBuyButtons();
   });
 
   $("#cartCheckout").addEventListener("click", () => {
@@ -402,7 +438,7 @@
     document.body.classList.remove("no-scroll");
     if (lastFocus) lastFocus.focus();
   }
-  $("#cartOpen").addEventListener("click", openCart);
+  document.querySelectorAll(".js-cart-open").forEach((b) => b.addEventListener("click", openCart));
   $("#cartClose").addEventListener("click", closeCart);
   el.overlay.addEventListener("click", closeCart);
   $("#cartToCatalog").addEventListener("click", () => { closeCart(); scrollToCatalog(); });
