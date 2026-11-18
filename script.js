@@ -12,7 +12,7 @@
   const $ = (sel) => document.querySelector(sel);
 
   const formatPrice = (n) =>
-    n.toLocaleString("ru-RU").replace(/ | |,/g, " ") + " " + SHOP.currency;
+    n.toLocaleString("ru-RU").replace(/\s|,/g, "\u00A0") + "\u00A0" + SHOP.currency; // неразрывные пробелы
 
   const escapeHtml = (s) =>
     String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
